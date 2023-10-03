@@ -1,0 +1,152 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id String @id @default(cuid())
+  username String @unique
+  password String
+  roleId String
+  status Boolean
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  role Role @relation(fields: [roleId], references: [id])
+  refreshTokens RefreshToken[]
+  profile UserProfile?
+  createdSale Sale[] @relation("createdBy")
+  updatedSale Sale[] @relation("updatedBy")
+}
+
+model UserProfile {
+  id String @id @default(cuid())
+  name String
+  gender Gender @default(MALE)
+  job String
+  email String
+  img String
+  userId String @unique
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  user User @relation(fields: [userId], references: [id])
+}
+
+model RefreshToken {
+  id          String   @id @unique @default(uuid())
+  hashedToken String
+  userId      String
+  User        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  revoked     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Role {
+  id String @id @default(cuid())
+  name String @unique
+  description String?
+  user User[]
+  menuAccess RolePermission[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model RolePermission {
+  roleId String
+  menuId String 
+  add Boolean @default(false)
+  view Boolean @default(false)
+  edit Boolean @default(false)
+  delete Boolean @default(false)
+  menu Menu @relation(fields: [menuId], references: [id])
+  role Role @relation(fields: [roleId],references: [id], onDelete: Cascade)
+
+  @@id([roleId, menuId])
+}
+
+model Menu {
+  id String @id @default(cuid())
+  title String
+  icon String?
+  url String?
+  parentId String?
+  sort Int?
+  parent Menu? @relation("Menus", fields: [parentId], references: [id])
+  child Menu[] @relation("Menus")
+  role RolePermission[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model EnumDB {
+  id String @id @default(cuid())
+  name String
+  description String?
+  type EnumType
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  ProductUnit Product[] @relation("EnumUnit")
+  ProductCategory Product[] @relation("EnumCategory")
+  ProductBrand Product[] @relation("EnumBrand")
+}
+
+model Product {
+  id String @id @default(cuid())
+  code String @unique
+  name String
+  stock Int
+  unitId String
+  categoryId String
+  brandId String
+  buyprice Float
+  sellprice Float
+  description String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  unit EnumDB @relation("EnumUnit",fields: [unitId], references: [id])
+  category EnumDB @relation("EnumCategory",fields: [categoryId], references: [id])
+  brand EnumDB @relation("EnumBrand",fields: [brandId], references: [id])
+  saleProduct SaleProduct[]
+}
+
+model Sale {
+  id String @id @default(cuid())
+  notrx String @unique
+  date DateTime
+  total Float
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  createdBy String
+  updatedBy String
+  userCreatedBy User @relation("createdBy",fields: [createdBy], references: [id])
+  userUpdatedBy User @relation("updatedBy",fields: [updatedBy],references: [id])
+  saleProduct SaleProduct[]
+}
+
+model SaleProduct {
+  id String @id @default(cuid())
+  parentId String
+  productId String
+  qty Int
+  price Float
+  parent Sale @relation(fields: [parentId],references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum EnumType {
+  CATEGORY
+  UNIT
+  BRAND
+}
